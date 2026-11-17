@@ -105,6 +105,7 @@ const I18N = {
     cols3: '3 columnas',
     cols4: '4 columnas',
     linkLooking: 'Buscando en USFans…',
+    unavailable: 'No disponible',
     linkUnavailable: 'No disponible en USFans',
     goHome: '← Registro',
     openBrowser: 'Abrir en navegador',
@@ -205,6 +206,7 @@ const I18N = {
     cols3: '3 columns',
     cols4: '4 columns',
     linkLooking: 'Looking it up on USFans…',
+    unavailable: 'Unavailable',
     linkUnavailable: 'Not available on USFans',
     goHome: '← Sign up',
     openBrowser: 'Open in browser',
@@ -305,6 +307,7 @@ const I18N = {
     cols3: '3 kolumny',
     cols4: '4 kolumny',
     linkLooking: 'Szukam w USFans…',
+    unavailable: 'Niedostępny',
     linkUnavailable: 'Niedostępny w USFans',
     goHome: '← Rejestracja',
     openBrowser: 'Otwórz w przeglądarce',
@@ -701,6 +704,7 @@ function trendingList(scope, tokens) {
     const k = productKeyOf(p.link);
     if (!seen.has(k)) { seen.add(k); picked.push(p); }
   }
+  { const g = scope.find((p) => p.soon); if (g && !picked.includes(g)) picked.splice(Math.floor(picked.length / 2), 0, g); } /* GTA6-SOON */
   return picked.filter((p) => (!state.tab || tabMatch(p)) && tokens.every((t) => p._n.includes(t)) && priceOk(p));
 }
 
@@ -982,11 +986,13 @@ function renderCount() {
 }
 
 function cardFor(p) {
-  const a = document.createElement('a');
+  const a = document.createElement(p.soon ? 'div' : 'a');   /* GTA6-SOON: sin enlace */
   a.className = 'card' + (p.id === state.activeId ? ' active' : '');
-  a.href = cardHref(p.link);
-  a.target = '_blank';
-  a.rel = 'noopener';
+  if (!p.soon) {
+    a.href = cardHref(p.link);
+    a.target = '_blank';
+    a.rel = 'noopener';
+  }
   a.dataset.id = p.id;
 
   const thumb = document.createElement('div');
@@ -1000,6 +1006,13 @@ function cardFor(p) {
     img.src = p.image;
     img.onerror = () => img.classList.add('broken');
     thumb.appendChild(img);
+  }
+  if (p.soon) {
+    a.classList.add('soon');
+    const s = document.createElement('span');
+    s.className = 'soon-tag';
+    s.textContent = t('unavailable');
+    thumb.appendChild(s);
   }
 
   const meta = document.createElement('div');
@@ -1436,6 +1449,7 @@ function openInApp(url) {
 }
 
 function openProduct(p, { newTab = false, focus = false } = {}) {
+  if (p.soon) return;
   trackClick(p);
   const url = agentUrl(p.link);
   if (isMobile()) {
@@ -1463,6 +1477,7 @@ const productFrom = (e) => {
 function onProductClick(e) {
   const p = productFrom(e);
   if (!p || e.button !== 0) return;
+  if (p.soon) { e.preventDefault(); return; }
   if (isMobile()) { // el enlace de la tarjeta se abre solo (en la app si está instalada); en iPhone con BoonBuy lo gestionamos nosotros
     trackClick(p);
     if (launchApp(p.link)) e.preventDefault();
@@ -2336,6 +2351,7 @@ async function init() {
     // Tendencias reales: llegan sin bloquear la carga; si se está viendo esa categoría, se repinta al llegar
     fetchTrending().then((keys) => { if (keys) { trendKeys = keys; if (state.category === TREND_KEY && state.all.length) applyFilters(); } });
     baseCatalog = CONFIG.dataUrl ? await loadCsv(CONFIG.dataUrl) : sampleProducts();
+    baseCatalog.push({ name: 'GTA 6', link: 'gta6', priceRaw: '$71.88', price: 71.88, image: '/gta6.jpg', categories: ['Trending Now'], sections: [], _n: 'gta 6', soon: true }); /* GTA6-SOON */
     // Si el servidor tarda (o está bloqueado), la hoja se enseña igual y los productos propios se añaden cuando lleguen
     const early = await Promise.race([extrasP, new Promise((r) => setTimeout(() => r(null), 2000))]);
     extraItems = early || [];
