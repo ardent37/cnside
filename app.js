@@ -2376,6 +2376,23 @@ async function init() {
   applyFilters();
   window.Accounts?.start();
   window.Hauls?.start();
+  // Caja sorpresa diaria: solo para el administrador. El código de la caja ni se descarga en un dispositivo normal. /* BOX-ADMIN */
+  const boxOpts = { pool: () => state.orig.filter((p) => p.image && !p.gone && !p.soon), open: (p) => openProduct(p), num: (raw) => parsePrice(raw), money: (n) => n.toLocaleString(locale(), { style: 'currency', currency: 'EUR' }) };
+  const loadBox = () => {
+    const css = document.createElement('link');
+    css.rel = 'stylesheet';
+    css.href = '/box.css?v=14';
+    document.head.appendChild(css);
+    const js = document.createElement('script');
+    js.src = '/box.js?v=22';
+    js.onload = () => window.CnBox?.start(boxOpts);
+    document.head.appendChild(js);
+  };
+  if (document.documentElement.dataset.admin === '1' || ['localhost', '127.0.0.1'].includes(location.hostname)) loadBox();
+  else {
+    const ob = new MutationObserver(() => { if (document.documentElement.dataset.admin === '1') { ob.disconnect(); loadBox(); } });
+    ob.observe(document.documentElement, { attributes: true, attributeFilter: ['data-admin'] });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', init);
